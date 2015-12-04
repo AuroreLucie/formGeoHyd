@@ -20,13 +20,15 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication
-from PyQt4.QtGui import QAction, QIcon
+from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt
+from PyQt4.QtGui import QAction, QIcon, QFileDialog
 # Initialize Qt resources from file resources.py
 import resources
 # Import the code for the dialog
 from formGeohyd_dialog import formGeohydDialog
 import os.path
+from qgis.gui import *
+from qgis.core import *
 
 
 class formGeohyd:
@@ -67,6 +69,10 @@ class formGeohyd:
         # TODO: We are going to let the user set this up in a future iteration
         self.toolbar = self.iface.addToolBar(u'formGeohyd')
         self.toolbar.setObjectName(u'formGeohyd')
+
+        #mes actions
+        self.dlg.ckbActivate.stateChanged.connect(self.activatelayer)
+        self.dlg.cmblayer.currentIndexChanged.connect(self.recherchechamps)
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -181,6 +187,14 @@ class formGeohyd:
 
     def run(self):
         """Run method that performs all the real work"""
+        self.dlg.cmblayer.clear()
+        #1 - Recuperer les couches
+        self.canvas = self.iface.mapCanvas()
+        layers = QgsVectorLayer()
+        layers = self.canvas.layers()
+        for layer in layers:
+            self.dlg.cmblayer.addItem(layer.name())
+        
         # show the dialog
         self.dlg.show()
         # Run the dialog event loop
@@ -190,3 +204,42 @@ class formGeohyd:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
             pass
+
+    def activatelayer(self,state):
+        """layername = self.dlg.cmblayer.currentText()
+        layers = QgsVectorLayer()
+        layers = self.canvas.layers()
+        for layer in layers:
+            if layer.name() == layername:
+                if self.iface.legendInterface().isLayerVisible(layer):
+                    self.iface.legendInterface().setLayerVisible(layer,False)"""
+        #print state
+        if state == Qt.Checked:
+            fileName = QFileDialog.getOpenFileName(self.dlg, 'Dialog Title', r'D:\aurore\11_DONNEES_SIG', '*')
+            vlayer = QgsVectorLayer(fileName,'macoucheajoutee','ogr')
+            #print fileName
+            if not vlayer.isValid():
+                print "Layer failed to load!"
+            #self.dlg.ckbActivate.checkState() = False
+            else:
+                print "Je passe"
+                self.iface.addVectorLayer(fileName,'macoucheajoutee','ogr')
+        self.canvas.refresh()
+        self.dlg.ckbActivate.setChecked(False)
+        
+
+    def recherchechamps(self):
+        self.dlg.txtbbrownser.clear()
+        layername = self.dlg.cmblayer.currentText()
+        layers = QgsVectorLayer()
+        layers = self.canvas.layers()
+        for layer in layers:
+            if layer.name() == layername:
+                fields = layer.pendingFields()
+                listfields = []
+                for field in fields:
+                    #print field.name()
+                    listfields.append(field.name())
+        slstfields = "\n".join(listfields)        
+        self.dlg.txtbbrownser.setText(slstfields)
+                    
